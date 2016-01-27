@@ -42,8 +42,8 @@ func regGet() (body []byte, err error) {
         //panic(err)
         return nil, err
     } 
-    fmt.Println("------------------original response------------------") 
-    fmt.Println(string(body))
+//    fmt.Println("------------------original response------------------") 
+//    fmt.Println(string(body))
     return body, nil
 }
 
@@ -54,8 +54,8 @@ func resolveToStruct(response []byte) (s *repoInfo, err error) {
 }   
 
 func showResult(rs *repoInfo) {
-
-    fmt.Println("------------------structure response------------------") 
+    fmt.Printf("Total %d \n\n", len(rs.Repositories))  
+//    fmt.Println("------------------structure response------------------") 
     for i := 0 ; i < len(rs.Repositories); i++ {
         fmt.Println(rs.Repositories[i])
     }
