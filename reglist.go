@@ -16,6 +16,14 @@ type repoInfo struct {
     Repositories []string `json: "repositories"`
 }
 
+type tagList struct {
+    Tags []string `json: "tags"`
+    Name string `json: "name"`
+}
+
+
+var tagsMap map[string][]string
+
 var defaultProtocol string
 var defaultRepoDomain string
 var defaultRepoPort string
@@ -31,7 +39,6 @@ func regGet() (body []byte, err error) {
     client := &http.Client{Transport: tr}
     resp, err := client.Get(defaultProtocol + defaultRepoDomain + defaultRepoPort + repoInfoPath)
     if err != nil {
-        //panic(err)
         return nil, err
     }
    
@@ -39,11 +46,8 @@ func regGet() (body []byte, err error) {
    
     body, err = ioutil.ReadAll(resp.Body)
     if err != nil {
-        //panic(err)
         return nil, err
     } 
-//    fmt.Println("------------------original response------------------") 
-//    fmt.Println(string(body))
     return body, nil
 }
 
@@ -53,13 +57,42 @@ func resolveToStruct(response []byte) (s *repoInfo, err error) {
 
 }   
 
-func showResult(rs *repoInfo) {
-    fmt.Printf("Total %d \n\n", len(rs.Repositories))  
-//    fmt.Println("------------------structure response------------------") 
-    for i := 0 ; i < len(rs.Repositories); i++ {
+func getTags(rs *repoInfo, tagsMap map[string][]string) {
+    tr := &http.Transport{
+        TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+    } 
+    client := &http.Client{Transport: tr}
+   
+
+    for i := 0; i < len(rs.Repositories); i++ {
+        resp, err := client.Get(defaultProtocol + defaultRepoDomain + defaultRepoPort + "/v2/" + rs.Repositories[i] + "/tags/list")
+        if err != nil {
+            fmt.Println("client.Get")
+            panic(err)
+        }
+   
+        defer resp.Body.Close()
+        var body []byte 
+        body, err = ioutil.ReadAll(resp.Body)
+        if err != nil {
+            fmt.Println("ioutil.ReadAll")
+            panic(err)
+        }
+
+        temp := new(tagList) 
+        json.Unmarshal(body, &temp)                
+        tagsMap[temp.Name] = temp.Tags
+    } 
+} 
+
+func showTags(tagsMap map[string][]string, rs *repoInfo) {
+    fmt.Printf("Total: %d\n\n", len(rs.Repositories))
+    for i := 0; i < len(tagsMap); i++ { 
         fmt.Println(rs.Repositories[i])
+        for j := 0; j < len(tagsMap[rs.Repositories[i]]); j++ {
+            fmt.Printf("\t\t: %s\n",tagsMap[rs.Repositories[i]][j])
+        } 
     }
-    //fmt.Println(*rs) 
 }
 
 func main() {
@@ -67,7 +100,7 @@ func main() {
     defaultRepoDomain = "registry.test.com"
     defaultRepoPort = ":5000"
     repoInfoPath = "/v2/_catalog"
-    
+ 
     var reponse []byte  
  
     reponse, err := regGet()
@@ -78,7 +111,9 @@ func main() {
     
     rs := new(repoInfo)   
     rs, err = resolveToStruct(reponse)      
-
-    showResult(rs)     
-     
+   
+    tagsMap := make(map[string][]string)
+   // tagsMap = getTags(rs)
+    getTags(rs, tagsMap)
+    showTags(tagsMap, rs)      
 }
