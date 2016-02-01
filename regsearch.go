@@ -1,6 +1,6 @@
 // This program is a strengthen version of reglist.sh
 // Maintainer: liyao.miao@yeepay.com
-// Date: 2016-01-27
+// Date: 2016-02-01
 
 
 package main
@@ -26,11 +26,22 @@ type tagList struct {
 
 var tagsMap map[string][]string
 
-var defaultProtocol string
-var defaultRepoDomain string
-var defaultRepoPort string
+var repoProtocol string
+var repoDomain string
+var repoPort string
 var repoInfoPath string
 
+func setDefaultHost() {
+    repoProtocol = "https://"
+    repoDomain = "registry.test.com"
+    repoPort = ":5000"
+    repoInfoPath = "/v2/_catalog"
+
+}
+
+func setHost(args string) {
+    repoDomain = args
+}
 
 func regGet() (body []byte, err error) {
 
@@ -39,7 +50,7 @@ func regGet() (body []byte, err error) {
     }
 
     client := &http.Client{Transport: tr}
-    resp, err := client.Get(defaultProtocol + defaultRepoDomain + defaultRepoPort + repoInfoPath)
+    resp, err := client.Get(repoProtocol + repoDomain + repoPort + repoInfoPath)
     if err != nil {
         return nil, err
     }
@@ -67,7 +78,7 @@ func getTags(rs *repoInfo, tagsMap map[string][]string) {
    
 
     for i := 0; i < len(rs.Repositories); i++ {
-        resp, err := client.Get(defaultProtocol + defaultRepoDomain + defaultRepoPort + "/v2/" + rs.Repositories[i] + "/tags/list")
+        resp, err := client.Get(repoProtocol + repoDomain + repoPort + "/v2/" + rs.Repositories[i] + "/tags/list")
         if err != nil {
             fmt.Println("client.Get")
             panic(err)
@@ -123,29 +134,47 @@ func searchItem(image string, tag string, tagsMap map[string][]string) {
     }
 }
 
+func parseImage() {
+        
+}
 
 func main() {
+    var image string
+    var tag string 
+ 
+    setDefaultHost()
+
     if len(os.Args) == 1 {
         fmt.Println("Usage:")
         fmt.Println("regsearch IMAGE[:TAG]")
         os.Exit(-1)
     }
-    var image string
-    var tag string 
-    if strings.Contains(os.Args[1], ":") {
-        args := strings.Split(os.Args[1], ":")
-        image = args[0]
-        tag = args[1]
-    } else {
-        image = os.Args[1]
-        tag = "" 
-    } 
 
-    defaultProtocol = "https://"
-    defaultRepoDomain = "registry.test.com"
-    defaultRepoPort = ":5000"
-    repoInfoPath = "/v2/_catalog"
- 
+    if len(os.Args) == 2 {
+        if strings.Contains(os.Args[1], ":") {
+            args := strings.Split(os.Args[1], ":")
+            image = args[0]
+            tag = args[1]
+        } else {
+             image = os.Args[1]
+             tag = ""
+        }
+   } 
+
+    if len(os.Args) == 4 {
+        if os.Args[1] == "-h" {
+            setHost(os.Args[2])        
+            if strings.Contains(os.Args[3], ":") {
+                args := strings.Split(os.Args[3], ":")
+                image = args[0]
+                tag = args[1]
+            } else {
+                image = os.Args[3] 
+                tag = ""
+            }
+        }
+    }
+    
     var reponse []byte  
  
     reponse, err := regGet()
