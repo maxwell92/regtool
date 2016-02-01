@@ -10,6 +10,7 @@ import (
     "io/ioutil"
     "crypto/tls"
     "encoding/json"
+    "os"
 )
 
 type repoInfo struct {
@@ -24,10 +25,21 @@ type tagList struct {
 
 var tagsMap map[string][]string
 
-var defaultProtocol string
-var defaultRepoDomain string
-var defaultRepoPort string
+var repoProtocol string
+var repoDomain string
+var repoPort string
 var repoInfoPath string
+
+func setDefaultHost() {
+    repoProtocol = "https://"
+    repoDomain = "registry.test.com"
+    repoPort = ":5000"
+    repoInfoPath = "/v2/_catalog"
+}
+
+func setHost(args string) {
+    repoDomain = args
+}
 
 
 func regGet() (body []byte, err error) {
@@ -37,7 +49,7 @@ func regGet() (body []byte, err error) {
     }
 
     client := &http.Client{Transport: tr}
-    resp, err := client.Get(defaultProtocol + defaultRepoDomain + defaultRepoPort + repoInfoPath)
+    resp, err := client.Get(repoProtocol + repoDomain + repoPort + repoInfoPath)
     if err != nil {
         return nil, err
     }
@@ -65,7 +77,7 @@ func getTags(rs *repoInfo, tagsMap map[string][]string) {
    
 
     for i := 0; i < len(rs.Repositories); i++ {
-        resp, err := client.Get(defaultProtocol + defaultRepoDomain + defaultRepoPort + "/v2/" + rs.Repositories[i] + "/tags/list")
+        resp, err := client.Get(repoProtocol + repoDomain + repoPort + "/v2/" + rs.Repositories[i] + "/tags/list")
         if err != nil {
             fmt.Println("client.Get")
             panic(err)
@@ -96,11 +108,16 @@ func showTags(tagsMap map[string][]string, rs *repoInfo) {
 }
 
 func main() {
-    defaultProtocol = "https://"
-    defaultRepoDomain = "registry.test.com"
-    defaultRepoPort = ":5000"
-    repoInfoPath = "/v2/_catalog"
- 
+
+    setDefaultHost() 
+     
+    if len(os.Args) == 3 {
+       if os.Args[1] == "-h" {
+            setHost(os.Args[2])
+       } 
+        
+    }
+    
     var reponse []byte  
  
     reponse, err := regGet()
